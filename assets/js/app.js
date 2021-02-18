@@ -20,8 +20,6 @@ import ReactDOM from 'react-dom';
 import Bulls from './Bulls'
 
 ReactDOM.render(
-  <React.StrictMode>
-    <Bulls />
-  </React.StrictMode>,
+    <Bulls />,
   document.getElementById('root')
 );

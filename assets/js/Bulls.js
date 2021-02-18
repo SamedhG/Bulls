@@ -4,8 +4,7 @@ import {ch_push, ch_join, ch_reset} from './socket';
 import { Table, TableHead, 
     TableBody, TableRow, TableCell, 
     Button, Paper, TableContainer, 
-    TextField, Grid, Typography} from "@material-ui/core";
-
+    TextField, Grid, Typography, Snackbar} from "@material-ui/core";
 
 // Return the reset screen
 function Finished({message, reset}) {
@@ -38,8 +37,8 @@ function Display({guesses}) {
             </TableRow>
         </TableHead>
         <TableBody>
-            {guesses.map(guess =>
-            <TableRow>
+            {guesses.map((guess, n) =>
+            <TableRow key={`row${n}`}>
                 <TableCell>{guess.guess}</TableCell>
                 <TableCell align="center">{guess.bulls}</TableCell>
                 <TableCell align="center">{guess.cows}</TableCell>
@@ -90,14 +89,14 @@ function Controls({guess, reset, setError}) {
     </Grid>)
 }
 
-export default function Bulls() {
+function Bulls() {
     // The game state: contains the secret and the guesses
     const [state, setState] = useState({gameOver: false, guesses: []});
     // The error object
     const [error, setError] = useState({error: false, message: "" });
 
     useEffect(() => {
-        ch_join(setState);
+        ch_join(setState, setError);
     });
 
     let main = null;
@@ -105,11 +104,12 @@ export default function Bulls() {
         main = (<Finished message={state.message} reset={ch_reset} />)
     } else {
         main = (<div style={{ width: "100%"}}>
-                <Controls setError={setError} guess={ch_push} reset={ch_reset} />
-                <Display guesses={state.guesses} />
+            <Controls setError={setError} guess={ch_push} reset={ch_reset} />
+            <Display guesses={state.guesses} />
         </div>);
 
     }
+
     // The standard game screen
     return (
         <div className="App" style={{ padding: 20 }}>
@@ -118,8 +118,10 @@ export default function Bulls() {
                     <Typography variant="h3"> Bulls&Cows </Typography>
                 </Grid>
                 {main}
+                <Snackbar open={error.error} message={error.message} />
             </Grid>
         </div>
     );
 }
 
+export default Bulls;

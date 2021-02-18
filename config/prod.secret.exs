@@ -13,7 +13,7 @@ secret_key_base =
 
 config :bulls, BullsWeb.Endpoint,
   http: [
-    port: String.to_integer(System.get_env("PORT") || "4000"),
+    port: String.to_integer(System.get_env("PORT") || "4800"),
     transport_options: [socket_opts: [:inet6]]
   ],
   secret_key_base: secret_key_base

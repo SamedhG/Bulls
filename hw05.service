@@ -1,0 +1,17 @@
+[Unit]
+Description=HW05 Bulls&Cows
+
+[Service]
+Type=simple
+User=bulls
+Group=bulls
+Restart=on-failure
+Environment=MIX_ENV=prod
+Environment=PORT=4800
+Environment=PROD=true
+Environment=LANG=en_US.UTF-8
+
+WorkingDirectory=/home/bulls/Bulls
+ExecStart=/bin/bash /home/bulls/Bulls/_build/prod/rel/practice/bin/practice start
+[Install]
+WantedBy=multi-user.target
