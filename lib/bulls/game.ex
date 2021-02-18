@@ -17,6 +17,10 @@ defmodule Bulls.Game do
   # returns a new state if the guess was valid else returns an error object
   def guess(st, guess) do 
     cond do
+      Enum.member?(st.guesses, st.secret) -> 
+        { :error, "You Win" }
+      length(st.guesses) >= 8 -> 
+        { :error, "You Lose" }
       String.length(guess) != 4 -> 
         { :error, "The length is not 4" }
       guess |> String.graphemes |> Enum.any?(&(&1 < "0" || &1 > "9")) -> 
