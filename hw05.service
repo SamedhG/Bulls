@@ -12,6 +12,6 @@ Environment=PROD=true
 Environment=LANG=en_US.UTF-8
 
 WorkingDirectory=/home/bulls/Bulls
-ExecStart=/bin/bash /home/bulls/Bulls/_build/prod/rel/practice/bin/practice start
+ExecStart=/bin/bash /home/bulls/Bulls/_build/prod/rel/bulls/bin/bulls start
 [Install]
 WantedBy=multi-user.target
