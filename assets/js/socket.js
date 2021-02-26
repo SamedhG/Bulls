@@ -5,7 +5,7 @@ import {Socket} from "phoenix"
 let socket = new Socket("/socket", {params: {token: ""}})
 socket.connect()
 
-let channel = socket.channel("game:1", {});
+let channel = null;
 let setState = null;
 let setError = null;
 let error = { error: false, message: "" }
@@ -31,7 +31,14 @@ export function ch_setup(cb, err) {
 }
 
 export function ch_login(name, user, observer, setLogin) {
-    channel.push("login", {name, user, observer})
+    channel = socket.channel("game:" + name, {})
+    channel.join()
+        .receive("ok", () => console.log("Joined Channel"))
+        .receive("error", resp => { console.log("Unable to join", resp) });
+
+    channel.on("view", state_update)
+
+    channel.push("login", {user, observer})
         .receive("ok", (st) => { state_update(st); setLogin(true) })
         .receive("error", set_error);
 }
@@ -54,8 +61,4 @@ export function ch_reset() {
         .receive("error", resp => { console.log("Unable to reset", resp) });
 }
 
-channel.join()
-    .receive("ok", () => console.log("Joined Channel"))
-    .receive("error", resp => { console.log("Unable to join", resp) });
 
-channel.on("view", state_update)

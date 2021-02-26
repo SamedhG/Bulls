@@ -5,30 +5,27 @@ defmodule BullsWeb.GameChannel do
   alias Bulls.GameServer
 
   @impl true
-  def join("game:1", _payload, socket) do
+  def join("game:" <> name, _payload, socket) do
     socket = socket
-             |> assign(:name, "")
+             |> assign(:name, name)
              |> assign(:user, "")
     {:ok, %{}, socket}
   end
 
 
   @impl true
-  def handle_in("login", %{ "user" => user, "name" => name, "observer" => observer }, socket) do
+  def handle_in("login", %{ "user" => user, "observer" => observer }, socket) do
+    name = socket.assigns[:name]
     GameServer.start(name)
     if observer do
         game = GameServer.peek(name)
-        socket = socket
-                 |> assign(:name, name)
-                 |> assign(:user, user)
+        socket = assign(socket, :user, user)
         view = Map.put Game.view(game), :user, user 
         {:reply, {:ok, view}, socket}
     else
         case GameServer.add_player(name, user) do
           { :ok, game } -> 
-            socket = socket
-                     |> assign(:name, name)
-                     |> assign(:user, user)
+            socket = assign(socket, :user, user)
             view = Map.put Game.view(game), :user, user 
             {:reply, {:ok, view}, socket}
           { :error, msg } -> {:reply,  { :error, %{message: msg} }, socket }

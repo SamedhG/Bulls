@@ -120,7 +120,7 @@ defmodule Bulls.GameServer do
 
   defp update_view(game, name) do
     BullsWeb.Endpoint.broadcast!(
-      "game:1",
+      "game:"<> name,
       "view",
       game |> Game.view |> Map.put(:name, name))
   end
