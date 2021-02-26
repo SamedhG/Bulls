@@ -12,17 +12,54 @@ This is a server implementation of the bulls&cows game.
 
 
 ## Data definition
-A Guess is sent by the client and is a string  
+#### Game State: 
+```
+{ 
+    state: :waiting,  
+    players: {name: ready?}, 
+    scoreboard: {name : {wins, losses} } 
+}
+```
 
-An `:ok` Guess reply is one of:
- - `{game_over: false, guesses: [] }`
- - `{game_over: true, message: "Some string"}`  
+```
+{ 
+    state: :ongoing, 
+    secret: "some secret", 
+    guesses: [[]], 
+    players: [],
+    current_guesses: []
+    scoreboard: {name : {wins, losses} } 
+}
+```
 
-An `:error` guess reply is a `{message: ""}`
+```
+{ 
+    state: :game_over,
+    players: {name: win?},
+    scoreboard: {name : {wins, losses} } 
+}
+```
 
-A Reset message has no payload
-A reset reply should always be `{game_over: false, guesses: [] }`
+#### Game View
 
+Get the current view in the following format:
+```
+%{ state: "waiting", players: ready_map, scoreboard }
+```
+
+```
+%{ state: "ongoing", guesses: guess_table, scoreboard }
+```
+
+
+```
+%{ state: "game_over", players: results_map, scoreboard }
+```
+
+Where 
+ - a ready_map is a map from players to ready? bools
+ - a guess_table is a list of maps of players to that rounds score
+ - a results map is a map from players to win? bools
 ## Running
 To start your Phoenix server:
 

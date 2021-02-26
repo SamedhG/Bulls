@@ -2,7 +2,7 @@
 # deploy script adapted from class notes
 export MIX_ENV=prod
 export SECRET_KEY_BASE=insecure
-export PORT=4800
+export PORT=4810
 
 mix deps.get --only prod
 mix compile
