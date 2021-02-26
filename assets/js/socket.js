@@ -9,7 +9,7 @@ let channel = socket.channel("game:1", {});
 let setState = null;
 let setError = null;
 let error = { error: false, message: "" }
-let state = { state: "waiting", players: {}, user: "", name: "" }
+let state = { state: "waiting", players: {}, user: "", name: "", scoreboard: {}}
 
 
 function state_update(st) {

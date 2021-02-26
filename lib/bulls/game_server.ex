@@ -68,6 +68,7 @@ defmodule Bulls.GameServer do
   def handle_call({:guess, name, player, guess}, _from, game) do
     case Game.guess(game, player, guess) do
       { :ok, game } -> 
+        IO.inspect game
         BackupAgent.put(name, game)
         {:reply, {:ok, game}, game}
       { :error, msg } ->
@@ -92,7 +93,7 @@ defmodule Bulls.GameServer do
       { :ok, game } ->
         BackupAgent.put(name, game)
         update_view(game, name)
-        if game.started do
+        if game.state == :ongoing do
           Process.send_after(self(), {:commit, name}, 30_000)
         end
         {:reply, {:ok, game}, game}
@@ -106,12 +107,15 @@ defmodule Bulls.GameServer do
   end
 
   def handle_info({:commit, name}, game) do
-    {:ok, game}  = Game.commit(game)
-    update_view(game, name)
-    if game.started do
-      Process.send_after(self(), {:commit, name}, 30_000)
+    case Game.commit(game) do
+      {:ok, game} ->
+        update_view(game, name)
+        if game.state == :ongoing do
+          Process.send_after(self(), {:commit, name}, 30_000)
+        end
+        {:noreply, game}
+       _ -> {:noreply, game}
     end
-    {:noreply, game}
   end
 
   defp update_view(game, name) do

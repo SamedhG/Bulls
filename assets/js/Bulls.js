@@ -6,21 +6,60 @@ import { Table, TableHead,
     Button, Paper, TableContainer, 
     TextField, Grid, Typography, Snackbar,
     Radio, RadioGroup, FormControlLabel, Box, Divider
-    } from "@material-ui/core";
+} from "@material-ui/core";
 import { makeStyles } from '@material-ui/core/styles';
 
 // Return the reset screen
-function Finished({message}) {
+function Finished({players, scoreboard}) {
     return (
-        <div className="App" style={{padding: 20, width: "100%"}}>
-            <Typography variant="h3">{message}</Typography>
-            <p>
-                <Button onClick={ch_reset} variant="contained" color="primary">
-                    Reset
-                </Button>
-            </p>
-        </div>
-    );
+        <Grid item xs={12}> 
+            <Button onClick={ch_reset} variant="contained" color="primary">Reset</Button>
+            <Typography variant="h4"> This Game </Typography>
+            <TableContainer component={Paper}> 
+                <Table>
+                    <TableHead color="primary">
+                        <TableRow>
+                            <TableCell width="60%"> 
+                                <Typography variant="h6"> User </Typography> 
+                            </TableCell>
+                            <TableCell align="center"> 
+                            </TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {Object.keys(players).map((user, n) =>
+                        <TableRow key={`p${n}`}>
+                            <TableCell>{user}</TableCell>
+                            <TableCell align="center">{players[user] ?  "won" : "lost" }</TableCell>
+                        </TableRow>)}
+                    </TableBody>
+                </Table> </TableContainer> 
+            <Typography variant="h4"> Scoreboard </Typography>
+            <TableContainer component={Paper}> 
+                <Table>
+                    <TableHead color="primary">
+                        <TableRow>
+                            <TableCell width="60%"> 
+                                <Typography variant="h6"> User </Typography> 
+                            </TableCell>
+                            <TableCell align="center">
+                                Wins
+                            </TableCell>
+                            <TableCell align="center">
+                                Losses
+                            </TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {Object.keys(scoreboard).map((name, n) =>
+                        <TableRow key={`sc${n}`}>
+                            <TableCell>{name}</TableCell>
+                            <TableCell align="center">{scoreboard[name].wins}</TableCell>
+                            <TableCell align="center">{scoreboard[name].losses}</TableCell>
+                        </TableRow>)}
+                    </TableBody>
+                </Table> </TableContainer> 
+        </Grid>)
 }
 
 
@@ -28,20 +67,20 @@ function Display({guesses}) {
 
     function one_round(guesses, n) {
         return(
-        <TableBody>
-            <TableRow key={`title${n}`}>
-                <TableCell colSpan={4}> Round: {n} </TableCell>
-            </TableRow>
-            { Object.keys(guesses).map(
-                (name, m) => (
-                    <TableRow key={`row${n}_${m}`}>
-                        <TableCell>{name}</TableCell>
-                        <TableCell>{guesses[name].guess}</TableCell>
-                        <TableCell align="center">{guesses[name].bulls}</TableCell>
-                        <TableCell align="center">{guesses[name].cows}</TableCell>
-                    </TableRow>))
-            }
-        </TableBody>)
+            <TableBody>
+                <TableRow key={`title${n}`}>
+                    <TableCell colSpan={4}> Round: {n} </TableCell>
+                </TableRow>
+                { Object.keys(guesses).map(
+                    (name, m) => (
+                        <TableRow key={`row${n}_${m}`}>
+                            <TableCell>{name}</TableCell>
+                            <TableCell>{guesses[name].guess}</TableCell>
+                            <TableCell align="center">{guesses[name].bulls}</TableCell>
+                            <TableCell align="center">{guesses[name].cows}</TableCell>
+                        </TableRow>))
+                }
+            </TableBody>)
 
     }
 
@@ -63,7 +102,7 @@ function Display({guesses}) {
             </TableRow>
         </TableHead>
         {guesses.map((x, n) => one_round(x, guesses.length - n))}
-        </Table> </TableContainer> </Grid>)
+    </Table> </TableContainer> </Grid>)
 }
 
 function Controls({guess, reset, error, setError}) {
@@ -93,7 +132,7 @@ function Controls({guess, reset, error, setError}) {
             '& .MuiButton-root': {
                 margin: theme.spacing(1),
             },
-           '& .MuiTypography-root': {
+            '& .MuiTypography-root': {
                 margin: theme.spacing(1),
             },
         },
@@ -217,10 +256,24 @@ function Waiting({players}) {
 }
 
 
+function TopBar({state}) {
+    return (
+        <Grid container alignItems="center" style={{padding: 10}} spacing={2}>
+            <Grid item xs> UserName: {state.user} </ Grid> 
+            <Divider orientation="vertical" flexItem />
+            <Grid item xs> GameName: {state.name}</ Grid> 
+            <Divider orientation="vertical" flexItem />
+            <Grid item xs> Wins: {state.scoreboard[state.user].wins || 0}</ Grid> 
+            <Divider orientation="vertical" flexItem />
+            <Grid item xs> Loses: {state.scoreboard[state.user].losses || 0}</ Grid> 
+        </Grid>
+    )
+}
+
 function Bulls() {
 
     // The game state: contains the secret and the guesses
-    const [state, setState] = useState({state: "waiting", players: {}, user: ""});
+    const [state, setState] = useState({state: "waiting", players: {}, user: "" , scoreboard: {}});
     // The error object
     const [error, setError] = useState({error: false, message: "" });
     // Manages the login state on the channel
@@ -229,42 +282,35 @@ function Bulls() {
     useEffect(() => {
         ch_setup(setState, setError);
     });
-
+    let topBar = <TopBar state={state}/>
     let main = null;
     if (!login) {
         main = <Login setLogin={setLogin}/>
+        topBar = null
     }
     else if (state.state == "waiting")  {
-        main = (<Waiting players={state.players} />)
-    } else {
+        main = ( <Waiting players={state.players} />)
+    } else if (state.state == "ongoing") {
         main = (<div style={{ width: "100%"}}>
             <Controls setError={setError} guess={ch_guess} reset={ch_reset} error={error} />
             <Display guesses={state.guesses} />
         </div>);
+    } else if (state.state == "game_over") 
+        main = <Finished players={state.players} scoreboard={state.scoreboard}/>
 
-    }
-
-    // The standard game screen
-    return (
-        <div className="App" style={{ padding: 20 }}>
-            <Grid container spacing={2} alignItems="flex-start">
-                <Grid item style={{paddingBottom: 40}} xs={12}>
-                    <Typography variant="h3"> Bulls&Cows </Typography>
-                </Grid>
-                <Grid container alignItems="center" style={{padding: 10}} spacing={2}>
-                    <Grid item xs> UserName: {state.user} </ Grid> 
-                    <Divider orientation="vertical" flexItem />
-                    <Grid item xs> GameName: {state.name}</ Grid> 
-                    <Divider orientation="vertical" flexItem />
-                    <Grid item xs> Wins: {state.wins || 0}</ Grid> 
-                    <Divider orientation="vertical" flexItem />
-                    <Grid item xs> Loses: {state.loses || 0}</ Grid> 
-                </Grid>
-                {main}
-                <Snackbar open={error.error} message={error.message} />
-            </Grid>
-        </div>
-    );
+            // The standard game screen
+            return (
+                <div className="App" style={{ padding: 20 }}>
+                    <Grid container spacing={2} alignItems="flex-start">
+                        <Grid item style={{paddingBottom: 40}} xs={12}>
+                            <Typography variant="h3"> Bulls&Cows </Typography>
+                        </Grid>
+                        {topBar}
+                        {main}
+                        <Snackbar open={error.error} message={error.message} />
+                    </Grid>
+                </div>
+            );
 }
 
 export default Bulls;

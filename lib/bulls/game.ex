@@ -2,28 +2,32 @@ defmodule Bulls.Game do
 
   # Create a new game instance:
   # A Game is one of: 
-  #   - { started: false, players: {name: ready?} }
-  #   - { started: true, 
+  #   - { state: :waiting, 
+  #       players: {name: ready?}, 
+  #       scoreboard: {name : {wins, losses} } }
+  #   - { state: :ongoing, 
   #       secret: "some secret", 
   #       guesses: [[]], 
   #       players: [],
   #       current_guesses: []
-  #     }
+  #       scoreboard: {name : {wins, losses} } }
+  #   - { state: :game_over,
+  #       players: {name: win?},
+  #       scoreboard: {name : {wins, losses} } }
   def new() do
     %{
-      started: false,
-      players: %{}
+      state: :waiting,
+      players: %{},
+      scoreboard: %{}
     }
   end
 
   def reset(st) do
-    if st.started do 
-      %{
-        started: false,
-        players: Enum.reduce(st.players, %{}, &(Map.put(&2, &1, false)))
-      }
-    else
-      st
+    result = %{ state: :waiting, scoreboard: st.scoreboard }
+    case st.state do
+      :waiting -> Map.put(result, :players, st.players)
+      :ongoing -> Map.put(result, :players, Enum.reduce(st.players, %{}, &(Map.put(&2, &1, false))))
+      :game_over -> Map.put(result, :players, Map.new(Enum.map(st.players, fn {k, _} -> {k, false} end)))
     end
   end
   ## Prestarting Functionality
@@ -31,20 +35,33 @@ defmodule Bulls.Game do
   # Add a new player to the game (Upto 4)
   def add_player(st, name) do
     cond do
-      st.started -> 
+      st.state != :waiting -> 
         { :error, "Game has already started" }
       st.players |> Map.keys |> length >= 4 ->
         { :error, "Max players of game reached" }
       Map.has_key?(st.players, name) ->
         { :error, "A player with this name is already in the game" }
-      true -> { :ok, %{ st | players: Map.put(st.players, name, false) } }
+      true -> { 
+          :ok, 
+          %{ st | 
+            players: Map.put(st.players, name, false),
+            scoreboard: Map.put_new(st.scoreboard, name, %{wins: 0, losses: 0})
+          }
+      }
+    end
+  end
+
+  def remove_player(st, player) do
+    case st.state do
+      :ongoing -> {:error, "Cant leave an ongoing game"}
+      _ -> {:ok, %{st | players: Map.delete(st.players, player) } }
     end
   end
 
   # Make a player ready, if all players (atleast 2) are ready game will start
   def ready(st, name) do
     cond do
-      st.started -> 
+      st.state != :waiting -> 
         { :error, "Game has already started" }
       !Map.has_key?(st.players, name) ->
         { :error, "You need to join before getting ready" }
@@ -53,11 +70,12 @@ defmodule Bulls.Game do
         if length(Map.keys(players)) >= 2 && Enum.all?(Map.values(players)) do
           players = Map.keys(players)
           { :ok, %{ 
-            started: true, 
+            state: :ongoing, 
             secret: random_secret(),
             guesses: [],
             current_guesses: Enum.map(players, fn _ -> "" end),
-            players: players
+            players: players,
+            scoreboard: st.scoreboard
           } }
         else
           { :ok, %{ st | players: players } }
@@ -71,7 +89,7 @@ defmodule Bulls.Game do
   # Make a guess for a player
   def guess(st, player, guess) do
     cond do
-      !st.started ->  { :error, "Game has not started yet" }
+      st.state != :ongoing ->  { :error, "Game has not started yet" }
       !Enum.member?(st.players, player) -> { :error, "You are not in this game" }
       true ->
         case validate(st, guess) do
@@ -88,7 +106,19 @@ defmodule Bulls.Game do
   # Commit the guesses to the game
   def commit(st) do
     cond do
-      !st.started -> { :error, "Game has not started yet" }
+      st.state != :ongoing -> { :error, "Game has not started yet" }
+      Enum.member?(st.current_guesses, st.secret) -> 
+        results = Map.new(Enum.zip(st.players, 
+          Enum.map(st.current_guesses, &(&1 === st.secret))))
+        scoreboard = Enum.reduce(results, st.scoreboard, 
+          fn {k, v}, acc ->
+            if v do 
+              %{acc | k=>%{st.scoreboard[k] | wins: st.scoreboard[k].wins + 1 }} 
+            else 
+              %{acc | k=>%{st.scoreboard[k] | losses: st.scoreboard[k].losses + 1 }} 
+            end 
+          end)
+        {:ok, %{ state: :game_over, scoreboard: scoreboard, players: results}}
       true -> 
         empty = Enum.map(st.players, fn _ -> "" end)
         { :ok, %{ st | 
@@ -122,33 +152,29 @@ defmodule Bulls.Game do
 
 
   # Get the current view in the following format:
-  # %{ state: "waiting", players: ready_map }
-  # %{ state: "ongoing", guesses: guess_table }
-  # %{ state: "game_over", results: results_map }
+  # %{ state: "waiting", players: ready_map, scoreboard }
+  # %{ state: "ongoing", guesses: guess_table, scoreboard }
+  # %{ state: "game_over", players: results_map, scoreboard }
   #
   # Where 
   #  - a ready_map is a map from players to ready? bools
   #  - a guess_table is a list of maps of players to that rounds score
   #  - a results map is a map from players to win? bools
   def view(st) do
-    cond do
-      !st.started -> 
-        %{ state: "waiting", players: st.players }
-      length(st.guesses) >= 1 && Enum.member?(hd(st.guesses), st.secret) ->
-        results = Map.new(Enum.zip(st.players, Enum.map(hd(st.guesses), &(&1 === st.secret))))
-        %{ state: "game_over", results: results }
-      true ->
+    case st.state do
+      :ongoing -> 
         guesses = Enum.map(st.guesses, 
           fn y -> 
             Enum.map(y, &(view_1(&1, st.secret))) 
           end)
         guesses = Enum.map(guesses, &(st.players |> Enum.zip(&1) |> Map.new))
         %{ 
-          state: "ongoing", 
-          guesses: guesses 
+          state: :ongoing, 
+          guesses: guesses,
+          scoreboard: st.scoreboard,
         }
+      _ -> st
     end
-
   end
 
   # Converts a guess and a secret to a view in the following form: 
@@ -195,5 +221,4 @@ defmodule Bulls.Game do
       add_num(MapSet.put(s, Enum.random(0..9)))
     end
   end
-
 end
