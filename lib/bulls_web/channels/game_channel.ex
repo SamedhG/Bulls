@@ -17,8 +17,8 @@ defmodule BullsWeb.GameChannel do
   def handle_in("login", %{ "user" => user, "observer" => observer }, socket) do
     name = socket.assigns[:name]
     GameServer.start(name)
-    if observer do
-        game = GameServer.peek(name)
+    game = GameServer.peek(name)
+    if Game.has_player?(game, user) || observer do
         socket = assign(socket, :user, user)
         view = Map.put Game.view(game), :user, user 
         {:reply, {:ok, view}, socket}

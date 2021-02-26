@@ -68,7 +68,6 @@ defmodule Bulls.GameServer do
   def handle_call({:guess, name, player, guess}, _from, game) do
     case Game.guess(game, player, guess) do
       { :ok, game } -> 
-        IO.inspect game
         BackupAgent.put(name, game)
         {:reply, {:ok, game}, game}
       { :error, msg } ->

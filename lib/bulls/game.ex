@@ -128,6 +128,14 @@ defmodule Bulls.Game do
     end
   end
 
+  def has_player?(st, player) do
+    if st.state == :ongoing do
+      Enum.member?(st.players, player)
+    else
+      Map.has_key?(st.players, player)
+    end
+  end
+
   # Checks for the following things:
   # - Repeats in the guess
   # - All digits
